@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const crypto = require('crypto');
 const TorrentSearchApi = require('torrent-search-api');
+const flaresolverr = require('./flaresolverr');
 
 const app = express();
 app.use(express.json());
@@ -38,9 +39,11 @@ for (const p of PROVIDERS) {
 const torrentCache = new Map();
 const CACHE_TTL = 60 * 60 * 1000;
 
-function cacheTorrent(torrent) {
+// Cache a result so /api/magnet can resolve its magnet later. `entry` carries a
+// `kind` ('tsa' for torrent-search-api, '1337x' for the FlareSolverr scraper).
+function cacheEntry(entry) {
   const id = crypto.randomBytes(8).toString('hex');
-  torrentCache.set(id, { torrent, expires: Date.now() + CACHE_TTL });
+  torrentCache.set(id, { ...entry, expires: Date.now() + CACHE_TTL });
   return id;
 }
 
@@ -169,7 +172,7 @@ app.get('/api/search', async (req, res) => {
       results.sort((a, b) => toNumber(b.seeds) - toNumber(a.seeds));
       return await Promise.all(
         results.map(async (t) => ({
-          id: cacheTorrent(t),
+          id: cacheEntry({ kind: 'tsa', torrent: t }),
           title: t.title,
           provider: t.provider || '',
           size: t.size || '',
@@ -185,7 +188,33 @@ app.get('/api/search', async (req, res) => {
     }
   })();
 
-  const [yts, torrents] = await Promise.all([ytsPromise, torrentsPromise]);
+  // Source 3 — 1337x via FlareSolverr (only if configured). Magnets live on the
+  // detail page, resolved lazily through /api/magnet.
+  const x1337Promise = (async () => {
+    if (!flaresolverr.enabled()) return [];
+    try {
+      const rows = await flaresolverr.search1337x(q, 20);
+      return await Promise.all(
+        rows.map(async (r) => ({
+          id: cacheEntry({ kind: '1337x', detailPath: r.detailPath }),
+          title: r.title,
+          provider: '1337x',
+          size: r.size,
+          seeds: r.seeds,
+          peers: r.peers,
+          magnet: null,
+          poster: await fetchPoster(r.title),
+        }))
+      );
+    } catch (err) {
+      console.warn('1337x (FlareSolverr) search failed:', err.message);
+      return [];
+    }
+  })();
+
+  const [yts, x1337, tsa] = await Promise.all([ytsPromise, x1337Promise, torrentsPromise]);
+  // Merge scraper sources (1337x first — usually higher quality), sorted by seeds.
+  const torrents = [...x1337, ...tsa].sort((a, b) => b.seeds - a.seeds);
   res.json({ yts, torrents, count: yts.length + torrents.length });
 });
 
@@ -194,10 +223,14 @@ app.get('/api/magnet/:id', async (req, res) => {
   const entry = torrentCache.get(req.params.id);
   if (!entry) return res.status(404).json({ error: 'Result expired, search again' });
   try {
-    if (typeof entry.torrent.magnet === 'string' && entry.torrent.magnet) {
-      return res.json({ magnet: entry.torrent.magnet });
+    let magnet;
+    if (entry.kind === '1337x') {
+      magnet = await flaresolverr.magnet1337x(entry.detailPath);
+    } else if (typeof entry.torrent.magnet === 'string' && entry.torrent.magnet) {
+      magnet = entry.torrent.magnet;
+    } else {
+      magnet = await TorrentSearchApi.getMagnet(entry.torrent);
     }
-    const magnet = await TorrentSearchApi.getMagnet(entry.torrent);
     if (!magnet) return res.status(404).json({ error: 'No magnet available for this result' });
     res.json({ magnet });
   } catch (err) {
@@ -368,5 +401,6 @@ app.post('/api/seedr/add', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`\n  Torrent Movie Search running at http://localhost:${PORT}`);
   console.log(`  Providers: ${PROVIDERS.join(', ')}`);
+  console.log(`  1337x (FlareSolverr): ${flaresolverr.enabled() ? 'enabled @ ' + flaresolverr.FLARESOLVERR_URL : 'DISABLED (set FLARESOLVERR_URL)'}`);
   console.log(`  TMDB posters: ${TMDB_API_KEY ? 'enabled' : 'DISABLED (set TMDB_API_KEY in .env)'}\n`);
 });

@@ -10,7 +10,22 @@ services:
       # next to this compose file: TMDB_API_KEY=your_key
       - TMDB_API_KEY=${TMDB_API_KEY:-}
       - PORT=3000
+      # Enables 1337x search by routing through the FlareSolverr container below.
+      - FLARESOLVERR_URL=http://flaresolverr:8191
     restart: unless-stopped
+    depends_on:
+      - flaresolverr
     # Makes the app show up as a proper tile in the CasaOS dashboard
     labels:
       icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/torrent.png"
+
+  # Solves Cloudflare's anti-bot challenge so 1337x results come through.
+  # Uses a headless browser, so it's a bit heavy on low-power boards (~250MB RAM).
+  flaresolverr:
+    # Pinned: v3.3.24 has an ARM Chrome-startup regression. v3.3.21 is stable on arm64.
+    image: ghcr.io/flaresolverr/flaresolverr:v3.3.21
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=info
+      - TZ=UTC
+    restart: unless-stopped

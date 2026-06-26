@@ -68,6 +68,33 @@ Credentials are forwarded once to Seedr to obtain an access token; the token is
 kept in your browser's localStorage and the server stores nothing. Then the
 **＋ Seedr** button on any movie card sends that magnet to your account.
 
+## 🛡️ Enable 1337x (Cloudflare bypass via FlareSolverr)
+
+1337x sits behind Cloudflare's "Just a moment…" challenge, which plain scrapers
+can't pass. To include 1337x results, run a [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr)
+container (a headless-browser solver) and point the app at it.
+
+**With the provided Compose files it's automatic** — they already include a
+`flaresolverr` service and set `FLARESOLVERR_URL=http://flaresolverr:8191`. Just
+`docker compose up -d` and 1337x results appear under "More from other sources".
+
+**Standalone / CasaOS custom app:** run FlareSolverr separately and set the env
+var on the TorrentFlix container:
+
+```bash
+docker run -d --name flaresolverr -p 8191:8191 --restart unless-stopped \
+  ghcr.io/flaresolverr/flaresolverr:v3.3.21
+# then on the app:  FLARESOLVERR_URL=http://<host-ip>:8191
+```
+
+Notes:
+- FlareSolverr uses a headless browser (~250 MB RAM); the **first** search is
+  slow (it solves the challenge) then it speeds up. Fine on an arm64 Orange Pi.
+- The image is pinned to **v3.3.21** — newer `v3.3.24` has an ARM Chrome-startup
+  bug. If you're on amd64 you can use `:latest` freely.
+- Without it, the app still works — you just won't get 1337x results (YTS and
+  the other scrapers are unaffected).
+
 ## 🐳 Run from Docker Hub
 
 A prebuilt multi-arch image (amd64 + arm64) is published to
@@ -122,7 +149,9 @@ customized app** with image `torrentflix:latest`, port `3000`, and the optional
 | Piece | Where | Notes |
 |-------|-------|-------|
 | Torrent search | `server.js` → `/api/search` | Scraping must run server-side; results cached in memory so magnets can be resolved lazily |
+| YTS + 1337x search | `/api/search` | Merges YTS API results with `torrent-search-api` scrapers and (if `FLARESOLVERR_URL` is set) 1337x via FlareSolverr |
 | Browse tags | `/api/browse` | Calls the keyless YTS API (with mirror fallback); returns posters, ratings, per-quality torrents with magnets built from the hash |
+| 1337x scraper | `flaresolverr.js` | Routes 1337x search + detail pages through FlareSolverr to clear Cloudflare, parses with cheerio |
 | Magnet resolve | `/api/magnet/:id` | Search results: some providers include the magnet inline, others are fetched on demand via `getMagnet()`. Browse cards carry the magnet inline. |
 | Posters | `fetchPoster()` | Cleans the release title, tries TMDB then iTunes, caches results |
 | Seedr login | `/api/seedr/login` | `POST token.php` with `client_id=seedr_chrome` |
