@@ -2,6 +2,7 @@
   "name": "torrent-movie-search",
   "version": "1.0.0",
   "description": "Search torrent sites, browse movies with posters, copy magnets, and push to Seedr.cc",
+  "license": "MIT",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {

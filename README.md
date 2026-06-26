@@ -1,5 +1,11 @@
 # 🎬 TorrentFlix — Torrent Movie Search
 
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A518-339933?logo=node.js&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)
+![CasaOS](https://img.shields.io/badge/CasaOS-self--hosted-00b3ff)
+![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+
 A small, self-hostable web app that searches torrent sites, shows movies as
 poster cards with seeder counts, lets you **copy a magnet with one click**, and
 **push a magnet straight to your [Seedr.cc](https://www.seedr.cc) cloud** with
@@ -60,6 +66,35 @@ Click **Connect Seedr** in the top-right and enter your Seedr email + password.
 Credentials are forwarded once to Seedr to obtain an access token; the token is
 kept in your browser's localStorage and the server stores nothing. Then the
 **＋ Seedr** button on any movie card sends that magnet to your account.
+
+## 🍊 Deploy on Orange Pi / Raspberry Pi (CasaOS) with Docker
+
+CasaOS is built on Docker, so the cleanest way to self-host is a container.
+Build it **on the device itself** (native ARM) — never copy a host
+`node_modules` into the image.
+
+```bash
+# 1. Copy the project to the device (or git clone it), then SSH in:
+cd ~/Torrent-Movie-Search
+
+# 2. (optional) add a TMDB key for nicer posters
+cp .env.example .env && nano .env
+
+# 3. Build & run — CasaOS already ships Docker
+docker compose up -d --build
+
+# 4. Watch the logs
+docker compose logs -f
+```
+
+Open `http://<device-ip>:3000`. The container also appears in the CasaOS
+dashboard automatically; for a managed tile use **CasaOS → + → Install a
+customized app** with image `torrentflix:latest`, port `3000`, and the optional
+`TMDB_API_KEY` env var.
+
+> **Tip:** YTS's main domain is DNS-blocked by some ISPs. The app already tries
+> mirrors (`yts.mx → yts.am → yts.lt → yts.rs`); override with `YTS_HOSTS` in
+> `.env` if needed.
 
 ## How it works
 
