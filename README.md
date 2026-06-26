@@ -2,8 +2,8 @@
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A518-339933?logo=node.js&logoColor=white)
-[![Docker Hub](https://img.shields.io/docker/v/siyamex/torrent-movie-search?logo=docker&logoColor=white&label=Docker%20Hub&sort=semver)](https://hub.docker.com/r/siyamex/torrent-movie-search)
-![Docker image size](https://img.shields.io/docker/image-size/siyamex/torrent-movie-search/latest?logo=docker&logoColor=white)
+[![Docker Hub](https://img.shields.io/docker/v/siyamexcom/torrent-movies?logo=docker&logoColor=white&label=Docker%20Hub&sort=semver)](https://hub.docker.com/r/siyamexcom/torrent-movies)
+![Docker image size](https://img.shields.io/docker/image-size/siyamexcom/torrent-movies/latest?logo=docker&logoColor=white)
 ![CasaOS](https://img.shields.io/badge/CasaOS-self--hosted-00b3ff)
 ![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
 
@@ -71,13 +71,13 @@ kept in your browser's localStorage and the server stores nothing. Then the
 ## 🐳 Run from Docker Hub
 
 A prebuilt multi-arch image (amd64 + arm64) is published to
-[`siyamex/torrent-movie-search`](https://hub.docker.com/r/siyamex/torrent-movie-search)
+[`siyamexcom/torrent-movies`](https://hub.docker.com/r/siyamexcom/torrent-movies)
 by GitHub Actions on every push to `main`. No build needed:
 
 ```bash
 docker run -d --name torrentflix -p 3000:3000 \
   -e TMDB_API_KEY=your_key_optional \
-  siyamex/torrent-movie-search:latest
+  siyamexcom/torrent-movies:latest
 ```
 
 …or with Compose:

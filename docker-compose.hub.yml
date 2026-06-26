@@ -2,7 +2,7 @@
 #   docker compose -f docker-compose.hub.yml up -d
 services:
   torrentflix:
-    image: siyamex/torrent-movie-search:latest
+    image: siyamexcom/torrent-movies:latest
     container_name: torrentflix
     ports:
       - "3000:3000"
