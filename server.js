@@ -142,35 +142,51 @@ app.get('/api/search', async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 30, 50);
   if (!q) return res.status(400).json({ error: 'Missing search query' });
 
-  try {
-    let results = await withTimeout(
-      TorrentSearchApi.search(q, category, limit), 25000, 'Search');
-    results = (results || []).filter((t) => t && t.title);
+  // Source 1 — YTS API: reliable, rich (posters, ratings, magnets), movies only.
+  const ytsPromise = (async () => {
+    try {
+      const params = new URLSearchParams({
+        query_term: q,
+        sort_by: 'download_count',
+        order_by: 'desc',
+        limit: '20',
+      });
+      const data = await ytsFetch(params.toString());
+      return mapYtsMovies(data.data && data.data.movies);
+    } catch (err) {
+      console.warn('YTS search failed:', err.message);
+      return [];
+    }
+  })();
 
-    // sort by seeders desc
-    results.sort((a, b) => toNumber(b.seeds) - toNumber(a.seeds));
+  // Source 2 — torrent-search-api scrapers for extra coverage. Many providers
+  // are Cloudflare-walled or dead now, so this often returns only a few.
+  const torrentsPromise = (async () => {
+    try {
+      let results = await withTimeout(
+        TorrentSearchApi.search(q, category, limit), 25000, 'Search');
+      results = (results || []).filter((t) => t && t.title);
+      results.sort((a, b) => toNumber(b.seeds) - toNumber(a.seeds));
+      return await Promise.all(
+        results.map(async (t) => ({
+          id: cacheTorrent(t),
+          title: t.title,
+          provider: t.provider || '',
+          size: t.size || '',
+          seeds: toNumber(t.seeds),
+          peers: toNumber(t.peers),
+          magnet: typeof t.magnet === 'string' ? t.magnet : null,
+          poster: await fetchPoster(t.title),
+        }))
+      );
+    } catch (err) {
+      console.warn('Provider search failed:', err.message);
+      return [];
+    }
+  })();
 
-    const enriched = await Promise.all(
-      results.map(async (t) => ({
-        id: cacheTorrent(t),
-        title: t.title,
-        provider: t.provider || '',
-        size: t.size || '',
-        seeds: toNumber(t.seeds),
-        peers: toNumber(t.peers),
-        time: t.time || '',
-        desc: t.desc || '',
-        // magnet may already be present on some providers (e.g. YTS)
-        magnet: typeof t.magnet === 'string' ? t.magnet : null,
-        poster: await fetchPoster(t.title),
-      }))
-    );
-
-    res.json({ count: enriched.length, results: enriched });
-  } catch (err) {
-    console.error('Search error:', err.message);
-    res.status(500).json({ error: 'Search failed: ' + err.message });
-  }
+  const [yts, torrents] = await Promise.all([ytsPromise, torrentsPromise]);
+  res.json({ yts, torrents, count: yts.length + torrents.length });
 });
 
 // Lazily resolve a magnet link for a cached search result.
@@ -206,6 +222,27 @@ const YTS_TRACKERS = [
 function ytsMagnet(hash, name) {
   const tr = YTS_TRACKERS.map((t) => '&tr=' + encodeURIComponent(t)).join('');
   return `magnet:?xt=urn:btih:${hash}&dn=${encodeURIComponent(name)}${tr}`;
+}
+
+// Map raw YTS movie objects into the card shape the frontend uses (posters,
+// rating, and one entry per quality with a ready-to-use magnet).
+function mapYtsMovies(movies) {
+  return (movies || []).map((m) => ({
+    title: m.title_long || m.title,
+    year: m.year,
+    rating: m.rating,
+    genres: m.genres || [],
+    poster: m.medium_cover_image || m.large_cover_image || null,
+    backdrop: m.large_cover_image || m.medium_cover_image || null,
+    summary: m.summary || '',
+    torrents: (m.torrents || []).map((t) => ({
+      quality: `${t.quality}${t.type ? ' ' + t.type : ''}`,
+      seeds: t.seeds || 0,
+      peers: t.peers || 0,
+      size: t.size || '',
+      magnet: ytsMagnet(t.hash, m.title_long || m.title),
+    })),
+  })).filter((m) => m.torrents.length);
 }
 
 const ALLOWED_SORTS = ['seeds', 'peers', 'download_count', 'like_count', 'rating', 'year', 'date_added'];
@@ -258,25 +295,7 @@ app.get('/api/browse', async (req, res) => {
     if (minRating !== '0') params.set('minimum_rating', minRating);
 
     const data = await ytsFetch(params.toString());
-    const movies = (data.data && data.data.movies) || [];
-
-    const results = movies.map((m) => ({
-      title: m.title_long || m.title,
-      year: m.year,
-      rating: m.rating,
-      genres: m.genres || [],
-      poster: m.medium_cover_image || m.large_cover_image || null,
-      backdrop: m.large_cover_image || m.medium_cover_image || null,
-      summary: m.summary || '',
-      // one entry per available quality, each with a ready-to-use magnet
-      torrents: (m.torrents || []).map((t) => ({
-        quality: `${t.quality}${t.type ? ' ' + t.type : ''}`,
-        seeds: t.seeds || 0,
-        peers: t.peers || 0,
-        size: t.size || '',
-        magnet: ytsMagnet(t.hash, m.title_long || m.title),
-      })),
-    })).filter((m) => m.torrents.length);
+    const results = mapYtsMovies(data.data && data.data.movies);
 
     if (sort === 'seeds') {
       const maxSeeds = (m) => Math.max(0, ...m.torrents.map((t) => t.seeds));

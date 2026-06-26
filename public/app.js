@@ -65,14 +65,22 @@ async function doSearch() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Search failed');
 
-    browseData = [];
-    if (!data.results.length) {
+    // YTS movies render as rich browse cards; scraper hits as simple cards.
+    browseData = data.yts || [];
+    const torrents = data.torrents || [];
+    const total = browseData.length + torrents.length;
+    if (!total) {
       statusEl.textContent = 'No results found. Try a different title.';
       resultsEl.innerHTML = '';
       return;
     }
-    statusEl.textContent = `${data.results.length} results`;
-    renderSearch(data.results);
+    statusEl.textContent = `${total} results`;
+    let html = browseData.length ? buildBrowseCards(browseData) : '';
+    if (torrents.length) {
+      if (browseData.length) html += '<div class="section-label">More from other sources</div>';
+      html += buildSearchCards(torrents);
+    }
+    resultsEl.innerHTML = html;
   } catch (err) {
     statusEl.textContent = '';
     resultsEl.innerHTML = '';
@@ -80,8 +88,8 @@ async function doSearch() {
   }
 }
 
-function renderSearch(items) {
-  resultsEl.innerHTML = items.map((t) => {
+function buildSearchCards(items) {
+  return items.map((t) => {
     const poster = t.poster
       ? `<img src="${esc(t.poster)}" data-full="${esc(t.poster)}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\\'ph\\'>🎞️</div>'" />`
       : `<div class="ph">🎞️</div>`;
@@ -128,7 +136,7 @@ async function doBrowse(params, tagEl) {
     }
     browseData = data.results;
     statusEl.textContent = `${data.results.length} movies`;
-    renderBrowse(data.results);
+    resultsEl.innerHTML = buildBrowseCards(data.results);
   } catch (err) {
     statusEl.textContent = '';
     resultsEl.innerHTML = '';
@@ -136,8 +144,8 @@ async function doBrowse(params, tagEl) {
   }
 }
 
-function renderBrowse(items) {
-  resultsEl.innerHTML = items.map((m, idx) => {
+function buildBrowseCards(items) {
+  return items.map((m, idx) => {
     const poster = m.poster
       ? `<img src="${esc(m.poster)}" data-full="${esc(m.backdrop || m.poster)}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\\'ph\\'>🎞️</div>'" />`
       : `<div class="ph">🎞️</div>`;

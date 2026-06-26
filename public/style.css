@@ -119,6 +119,18 @@ header {
   margin: 0 auto;
 }
 
+.section-label {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+  margin-top: 6px;
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--border);
