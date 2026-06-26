@@ -1,0 +1,14 @@
+# Run the prebuilt image straight from Docker Hub — no local build needed.
+#   docker compose -f docker-compose.hub.yml up -d
+services:
+  torrentflix:
+    image: siyamex/torrent-movie-search:latest
+    container_name: torrentflix
+    ports:
+      - "3000:3000"
+    environment:
+      - TMDB_API_KEY=${TMDB_API_KEY:-}
+      - PORT=3000
+    restart: unless-stopped
+    labels:
+      icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/torrent.png"
