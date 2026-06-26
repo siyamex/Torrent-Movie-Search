@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Torrent Movie Search</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">🎬 Torrent<span>Flix</span></div>
+    <button id="seedrBtn" class="seedr-status" title="Connect Seedr account">
+      <span id="seedrLabel">Connect Seedr</span>
+    </button>
+  </header>
+
+  <div class="searchbar">
+    <input id="query" type="text" placeholder="Search for a movie…" autocomplete="off" />
+    <select id="category">
+      <option value="Movies">Movies</option>
+      <option value="All">All</option>
+      <option value="TV">TV</option>
+    </select>
+    <button id="searchBtn">Search</button>
+  </div>
+
+  <div class="tags" id="tags">
+    <span class="tags-label">Browse:</span>
+    <button class="tag" data-sort="download_count">🔥 Popular</button>
+    <button class="tag" data-sort="seeds">🌱 Most Seeded</button>
+    <button class="tag" data-sort="date_added">🆕 Latest</button>
+    <button class="tag" data-sort="rating" data-min="7">⭐ Top Rated</button>
+    <span class="tags-sep"></span>
+    <button class="tag" data-genre="action">Action</button>
+    <button class="tag" data-genre="comedy">Comedy</button>
+    <button class="tag" data-genre="horror">Horror</button>
+    <button class="tag" data-genre="sci-fi">Sci-Fi</button>
+    <button class="tag" data-genre="animation">Animation</button>
+    <button class="tag" data-genre="thriller">Thriller</button>
+    <span class="tags-sep"></span>
+    <button class="tag" data-quality="2160p">4K</button>
+    <button class="tag" data-quality="1080p">1080p</button>
+  </div>
+
+  <div id="status" class="status"></div>
+  <main id="results" class="grid"></main>
+
+  <!-- Seedr login modal -->
+  <div id="modal" class="modal hidden">
+    <div class="modal-box">
+      <h2>Connect to Seedr.cc</h2>
+      <p class="muted">Your credentials are sent only to Seedr to get a token. Nothing is stored on the server.</p>
+      <input id="seedrEmail" type="email" placeholder="Seedr email" />
+      <input id="seedrPass" type="password" placeholder="Seedr password" />
+      <div id="modalError" class="modal-error"></div>
+      <div class="modal-actions">
+        <button id="modalCancel" class="btn-ghost">Cancel</button>
+        <button id="modalLogin" class="btn-primary">Connect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Poster lightbox -->
+  <div id="lightbox" class="lightbox hidden">
+    <img id="lightboxImg" src="" alt="" />
+    <div id="lightboxCaption" class="lightbox-caption"></div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

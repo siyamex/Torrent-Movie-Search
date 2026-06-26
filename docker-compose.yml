@@ -1,0 +1,16 @@
+services:
+  torrentflix:
+    build: .
+    image: torrentflix:latest
+    container_name: torrentflix
+    ports:
+      - "3000:3000"
+    environment:
+      # Optional — leave blank for placeholder posters. Set in a .env file
+      # next to this compose file: TMDB_API_KEY=your_key
+      - TMDB_API_KEY=${TMDB_API_KEY:-}
+      - PORT=3000
+    restart: unless-stopped
+    # Makes the app show up as a proper tile in the CasaOS dashboard
+    labels:
+      icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/torrent.png"

@@ -1,0 +1,11 @@
+# CRITICAL: never copy the host's node_modules into the image.
+# It was built for Windows/x64 and will break on the Orange Pi (ARM).
+node_modules
+npm-debug.log
+
+.env
+.git
+.gitignore
+server.log
+.claude
+README.md
